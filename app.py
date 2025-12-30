@@ -3,7 +3,8 @@ import json
 import base64
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,8 +16,8 @@ app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Configure Gemini
-genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
+# Configure Gemini client
+client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 ALLOWED_EXTENSIONS = {'pdf'}
 
@@ -183,38 +184,31 @@ def extract_data():
         if file and file.filename and allowed_file(file.filename):
             # Read file content directly
             file_content = file.read()
-            pdf_parts.append({
-                'mime_type': 'application/pdf',
-                'data': base64.standard_b64encode(file_content).decode('utf-8')
-            })
+            pdf_parts.append(
+                types.Part.from_bytes(
+                    data=file_content,
+                    mime_type='application/pdf'
+                )
+            )
     
     if not pdf_parts:
         return jsonify({'error': 'No valid PDF files found'}), 400
     
     try:
-        # Use Gemini 3 Flash with HIGH thinking level for best reasoning
-        model = genai.GenerativeModel('gemini-3-flash-preview')
-        
         # Build content with PDFs and prompt
-        content_parts = []
-        for i, pdf in enumerate(pdf_parts):
-            content_parts.append({
-                'inline_data': {
-                    'mime_type': pdf['mime_type'],
-                    'data': pdf['data']
-                }
-            })
-        content_parts.append(EXTRACTION_PROMPT)
+        content_parts = pdf_parts + [EXTRACTION_PROMPT]
         
-        response = model.generate_content(
-            content_parts,
-            generation_config={
-                'temperature': 0.1,
-                'max_output_tokens': 8192,
-                'thinking_config': {
-                    'thinking_level': 'HIGH'
-                }
-            }
+        # Use Gemini 3 Flash with HIGH thinking level
+        response = client.models.generate_content(
+            model='gemini-3-flash-preview',
+            contents=content_parts,
+            config=types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=8192,
+                thinking_config=types.ThinkingConfig(
+                    thinking_level=types.ThinkingLevel.HIGH
+                )
+            )
         )
         
         # Parse the response
@@ -251,4 +245,3 @@ def health():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
-
