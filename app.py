@@ -206,7 +206,7 @@ def extract_data():
                 temperature=0.1,
                 max_output_tokens=8192,
                 thinking_config=types.ThinkingConfig(
-                    thinking_level=types.ThinkingLevel.HIGH
+                    thinking_level="high"
                 )
             )
         )
