@@ -192,8 +192,8 @@ def extract_data():
         return jsonify({'error': 'No valid PDF files found'}), 400
     
     try:
-        # Use Gemini 2.0 Flash Thinking (reasoning model)
-        model = genai.GenerativeModel('gemini-2.0-flash-thinking-exp')
+        # Use Gemini 3 Flash with HIGH thinking level for best reasoning
+        model = genai.GenerativeModel('gemini-3-flash-preview')
         
         # Build content with PDFs and prompt
         content_parts = []
@@ -211,6 +211,9 @@ def extract_data():
             generation_config={
                 'temperature': 0.1,
                 'max_output_tokens': 8192,
+                'thinking_config': {
+                    'thinking_level': 'HIGH'
+                }
             }
         )
         
