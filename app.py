@@ -198,16 +198,13 @@ def extract_data():
         # Build content with PDFs and prompt
         content_parts = pdf_parts + [EXTRACTION_PROMPT]
         
-        # Use Gemini 3 Flash with HIGH thinking level
+        # Use Gemini 3 Flash (thinking is enabled by default)
         response = client.models.generate_content(
             model='gemini-3-flash-preview',
             contents=content_parts,
             config=types.GenerateContentConfig(
                 temperature=0.1,
-                max_output_tokens=8192,
-                thinking_config=types.ThinkingConfig(
-                    thinking_level="high"
-                )
+                max_output_tokens=8192
             )
         )
         
