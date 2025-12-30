@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covidence Data Extractor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #f0883e;
+            --accent-hover: #db7c37;
+            --success: #3fb950;
+            --warning: #d29922;
+            --error: #f85149;
+            --info: #58a6ff;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            min-height: 100vh;
+        }
+        
+        /* Left Panel - Upload */
+        .upload-panel {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), #f0c23e);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--bg-primary);
+        }
+        
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .logo span {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 400;
+            display: block;
+        }
+        
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background: var(--bg-tertiary);
+        }
+        
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(240, 136, 62, 0.05);
+        }
+        
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.7;
+        }
+        
+        .drop-zone h3 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .drop-zone p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .file-icon {
+            font-size: 20px;
+        }
+        
+        .file-name {
+            flex: 1;
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .file-remove {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .file-remove:hover {
+            color: var(--error);
+            background: rgba(248, 81, 73, 0.1);
+        }
+        
+        .extract-btn {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        
+        .extract-btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+        
+        .extract-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+        }
+        
+        .status.loading {
+            display: block;
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px solid var(--info);
+            color: var(--info);
+        }
+        
+        .status.error {
+            display: block;
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .tips {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: auto;
+        }
+        
+        .tips h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+        
+        .tips ul {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding-left: 16px;
+        }
+        
+        .tips li {
+            margin-bottom: 4px;
+        }
+        
+        /* Right Panel - Results */
+        .results-panel {
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--bg-primary);
+        }
+        
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .results-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .copy-all-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        
+        .copy-all-btn:hover {
+            background: var(--border);
+        }
+        
+        .placeholder {
+            text-align: center;
+            padding: 80px 40px;
+            color: var(--text-secondary);
+        }
+        
+        .placeholder-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .placeholder h3 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .results-content {
+            display: none;
+        }
+        
+        .results-content.active {
+            display: block;
+        }
+        
+        .section {
+            margin-bottom: 24px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent);
+        }
+        
+        .section-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            flex: 1;
+        }
+        
+        .section-copy {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .section-copy:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .field-grid {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .field {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .field-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .field-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .field-copy {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .field-copy:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+        
+        .field-copy.copied {
+            color: var(--success);
+        }
+        
+        .field-value {
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            user-select: all;
+            cursor: text;
+        }
+        
+        .field-value.nr {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .field-evidence {
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .field-evidence::before {
+            content: '📍 ';
+        }
+        
+        .evidence-toggle {
+            background: none;
+            border: none;
+            color: var(--info);
+            cursor: pointer;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .evidence-toggle:hover {
+            background: rgba(88, 166, 255, 0.1);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .data-table th, .data-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+        
+        .data-table th {
+            background: var(--bg-tertiary);
+            font-weight: 500;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .data-table td {
+            font-family: 'JetBrains Mono', monospace;
+            user-select: all;
+        }
+        
+        .notes-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .notes-box h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--warning);
+        }
+        
+        .notes-box p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .upload-panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upload-panel">
+            <div class="logo">
+                <div class="logo-icon">CE</div>
+                <h1>Covidence Extractor<span>Burst Fracture Review</span></h1>
+            </div>
+            
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-icon">📄</div>
+                <h3>Drop PDFs here</h3>
+                <p>or click to browse (max 3 files)</p>
+                <input type="file" class="file-input" id="fileInput" accept=".pdf" multiple>
+            </div>
+            
+            <div class="file-list" id="fileList"></div>
+            
+            <button class="extract-btn" id="extractBtn" disabled>
+                Extract Data with Gemini
+            </button>
+            
+            <div class="status" id="status"></div>
+            
+            <div class="tips">
+                <h4>💡 Tips for best results</h4>
+                <ul>
+                    <li>Upload the main article PDF</li>
+                    <li>Include supplementary materials if available</li>
+                    <li>Review extracted values with citations</li>
+                    <li>NR = Not Reported in the paper</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="results-panel">
+            <div class="results-header">
+                <h2>Extracted Data</h2>
+                <button class="copy-all-btn" id="copyAllBtn" style="display: none;">
+                    📋 Copy All (Plain Text)
+                </button>
+            </div>
+            
+            <div class="placeholder" id="placeholder">
+                <div class="placeholder-icon">📊</div>
+                <h3>Ready to extract</h3>
+                <p>Upload PDF(s) and click Extract to see Covidence-ready data</p>
+            </div>
+            
+            <div class="results-content" id="resultsContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const extractBtn = document.getElementById('extractBtn');
+        const status = document.getElementById('status');
+        const placeholder = document.getElementById('placeholder');
+        const resultsContent = document.getElementById('resultsContent');
+        const copyAllBtn = document.getElementById('copyAllBtn');
+        
+        let selectedFiles = [];
+        let extractedData = null;
+        
+        // Drag and drop handlers
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        function handleFiles(files) {
+            const pdfFiles = Array.from(files).filter(f => f.type === 'application/pdf');
+            
+            if (selectedFiles.length + pdfFiles.length > 3) {
+                alert('Maximum 3 PDF files allowed');
+                return;
+            }
+            
+            selectedFiles = [...selectedFiles, ...pdfFiles].slice(0, 3);
+            updateFileList();
+        }
+        
+        function updateFileList() {
+            fileList.innerHTML = selectedFiles.map((file, i) => `
+                <div class="file-item">
+                    <span class="file-icon">📄</span>
+                    <span class="file-name">${file.name}</span>
+                    <button class="file-remove" onclick="removeFile(${i})">×</button>
+                </div>
+            `).join('');
+            
+            extractBtn.disabled = selectedFiles.length === 0;
+        }
+        
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+        
+        extractBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            
+            extractBtn.disabled = true;
+            status.className = 'status loading';
+            status.innerHTML = '<span class="spinner"></span>Analyzing PDFs with Gemini... (may take 30-60s)';
+            
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('files', file));
+            
+            try {
+                const response = await fetch('/extract', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                if (result.parse_error) {
+                    status.className = 'status error';
+                    status.textContent = 'Response parsing issue - showing raw output';
+                    resultsContent.innerHTML = `<pre style="white-space: pre-wrap; font-size: 12px;">${result.raw_response}</pre>`;
+                    resultsContent.classList.add('active');
+                    placeholder.style.display = 'none';
+                } else {
+                    extractedData = result.data;
+                    status.className = 'status';
+                    status.style.display = 'none';
+                    renderResults(result.data);
+                }
+                
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = `Error: ${error.message}`;
+            }
+            
+            extractBtn.disabled = false;
+        });
+        
+        function renderResults(data) {
+            placeholder.style.display = 'none';
+            resultsContent.classList.add('active');
+            copyAllBtn.style.display = 'block';
+            
+            let html = '';
+            
+            // General Information
+            html += renderSection('General Information', [
+                { label: 'Authors & Year', key: 'authors_year', data: data.general_information },
+                { label: 'Country', key: 'country', data: data.general_information }
+            ]);
+            
+            // Methods
+            html += renderSection('Methods', [
+                { label: 'AIM/Objective of the study', key: 'aim_objective', data: data.methods },
+                { label: 'Study procedure for burst fracture treatment', key: 'study_procedure', data: data.methods },
+                { label: 'Study design', key: 'study_design', data: data.methods },
+                { label: 'Start date', key: 'start_date', data: data.methods },
+                { label: 'End date', key: 'end_date', data: data.methods }
+            ]);
+            
+            // Participants
+            html += renderSection('Participants', [
+                { label: 'Total number of participants', key: 'total_number', data: data.participants },
+                { label: 'Number of females included (total number)', key: 'females_total_number', data: data.participants },
+                { label: 'Number of females included (%)', key: 'females_percentage', data: data.participants },
+                { label: 'Results reported for gender differences?', key: 'gender_differences_reported', data: data.participants },
+                { label: 'Differences in treatment outcome between gender?', key: 'treatment_outcome_gender_differences', data: data.participants }
+            ]);
+            
+            // Age Table
+            html += `
+                <div class="section">
+                    <div class="section-header">
+                        <h3>Age</h3>
+                        <button class="section-copy" onclick="copyTable('ageTable')">Copy table</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="ageTable">
+                            <tr>
+                                <th></th>
+                                <th>Mean</th>
+                                <th>SD</th>
+                            </tr>
+                            <tr>
+                                <td>Female</td>
+                                <td>${getValue(data.participants, 'age_female_mean')}</td>
+                                <td>${getValue(data.participants, 'age_female_sd')}</td>
+                            </tr>
+                            <tr>
+                                <td>Male</td>
+                                <td>${getValue(data.participants, 'age_male_mean')}</td>
+                                <td>${getValue(data.participants, 'age_male_sd')}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            // Outcomes Time Point 1
+            if (data.outcomes_timepoint1) {
+                html += `
+                    <div class="section">
+                        <div class="section-header">
+                            <h3>Outcome Table (Time Point 1)</h3>
+                            <button class="section-copy" onclick="copyTable('outcomeTable1')">Copy table</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="outcomeTable1">
+                                <tr>
+                                    <th>Intervention</th>
+                                    <th>Mean</th>
+                                    <th>SD</th>
+                                </tr>
+                                <tr>
+                                    <td>${getValue(data.outcomes_timepoint1, 'intervention1_name')}</td>
+                                    <td>${getValue(data.outcomes_timepoint1, 'intervention1_mean')}</td>
+                                    <td>${getValue(data.outcomes_timepoint1, 'intervention1_sd')}</td>
+                                </tr>
+                                <tr>
+                                    <td>${getValue(data.outcomes_timepoint1, 'intervention2_name')}</td>
+                                    <td>${getValue(data.outcomes_timepoint1, 'intervention2_mean')}</td>
+                                    <td>${getValue(data.outcomes_timepoint1, 'intervention2_sd')}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Outcomes by Gender
+            if (data.outcomes_by_gender) {
+                html += `
+                    <div class="section">
+                        <div class="section-header">
+                            <h3>Outcome Table (by Gender)</h3>
+                            <button class="section-copy" onclick="copyTable('outcomeTableGender')">Copy table</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="outcomeTableGender">
+                                <tr>
+                                    <th></th>
+                                    <th>Specify Intervention</th>
+                                    <th>Mean (female)</th>
+                                    <th>SD (female)</th>
+                                    <th>Mean (male)</th>
+                                    <th>SD (male)</th>
+                                </tr>
+                                <tr>
+                                    <td>Intervention 1</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'name')}</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'female_mean')}</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'female_sd')}</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'male_mean')}</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'male_sd')}</td>
+                                </tr>
+                                <tr>
+                                    <td>Intervention 2</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'name')}</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'female_mean')}</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'female_sd')}</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'male_mean')}</td>
+                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'male_sd')}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Extraction Notes
+            if (data.extraction_notes) {
+                html += `
+                    <div class="notes-box">
+                        <h4>⚠️ Extraction Notes</h4>
+                        <p>${data.extraction_notes}</p>
+                    </div>
+                `;
+            }
+            
+            resultsContent.innerHTML = html;
+        }
+        
+        function renderSection(title, fields) {
+            let html = `
+                <div class="section">
+                    <div class="section-header">
+                        <h3>${title}</h3>
+                    </div>
+                    <div class="field-grid">
+            `;
+            
+            fields.forEach(f => {
+                const fieldData = f.data?.[f.key];
+                const value = fieldData?.value || 'NR';
+                const evidence = fieldData?.evidence;
+                const isNR = value === 'NR' || !value;
+                
+                html += `
+                    <div class="field">
+                        <div class="field-header">
+                            <span class="field-label">${f.label}</span>
+                            <button class="field-copy" onclick="copyValue(this, '${escapeHtml(value)}')">Copy</button>
+                        </div>
+                        <div class="field-value ${isNR ? 'nr' : ''}">${escapeHtml(value)}</div>
+                        ${evidence && evidence !== 'NR' ? `<div class="field-evidence">${escapeHtml(evidence)}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
+            return html;
+        }
+        
+        function getValue(obj, key) {
+            return obj?.[key]?.value || 'NR';
+        }
+        
+        function getNestedValue(obj, parent, key) {
+            return obj?.[parent]?.[key]?.value || 'NR';
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function copyValue(btn, value) {
+            navigator.clipboard.writeText(value);
+            btn.textContent = '✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'Copy';
+                btn.classList.remove('copied');
+            }, 1500);
+        }
+        
+        function copyTable(tableId) {
+            const table = document.getElementById(tableId);
+            const rows = table.querySelectorAll('tr');
+            let text = '';
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('th, td');
+                text += Array.from(cells).map(c => c.textContent.trim()).join('\t') + '\n';
+            });
+            
+            navigator.clipboard.writeText(text);
+        }
+        
+        copyAllBtn.addEventListener('click', () => {
+            if (!extractedData) return;
+            
+            const d = extractedData;
+            let text = `=== COVIDENCE DATA EXTRACTION ===
+
+--- GENERAL INFORMATION ---
+Authors & Year: ${getValue(d.general_information, 'authors_year')}
+Country: ${getValue(d.general_information, 'country')}
+
+--- METHODS ---
+AIM/Objective: ${getValue(d.methods, 'aim_objective')}
+Study procedure: ${getValue(d.methods, 'study_procedure')}
+Study design: ${getValue(d.methods, 'study_design')}
+Start date: ${getValue(d.methods, 'start_date')}
+End date: ${getValue(d.methods, 'end_date')}
+
+--- PARTICIPANTS ---
+Total number: ${getValue(d.participants, 'total_number')}
+Females (n): ${getValue(d.participants, 'females_total_number')}
+Females (%): ${getValue(d.participants, 'females_percentage')}
+Gender differences reported: ${getValue(d.participants, 'gender_differences_reported')}
+Treatment outcome gender diff: ${getValue(d.participants, 'treatment_outcome_gender_differences')}
+
+--- AGE ---
+Female Mean: ${getValue(d.participants, 'age_female_mean')}
+Female SD: ${getValue(d.participants, 'age_female_sd')}
+Male Mean: ${getValue(d.participants, 'age_male_mean')}
+Male SD: ${getValue(d.participants, 'age_male_sd')}
+
+--- OUTCOMES (Time Point 1) ---
+Intervention 1: ${getValue(d.outcomes_timepoint1, 'intervention1_name')}
+  Mean: ${getValue(d.outcomes_timepoint1, 'intervention1_mean')}
+  SD: ${getValue(d.outcomes_timepoint1, 'intervention1_sd')}
+Intervention 2: ${getValue(d.outcomes_timepoint1, 'intervention2_name')}
+  Mean: ${getValue(d.outcomes_timepoint1, 'intervention2_mean')}
+  SD: ${getValue(d.outcomes_timepoint1, 'intervention2_sd')}
+
+--- NOTES ---
+${d.extraction_notes || 'None'}
+`;
+            
+            navigator.clipboard.writeText(text);
+            copyAllBtn.textContent = '✓ Copied!';
+            setTimeout(() => {
+                copyAllBtn.textContent = '📋 Copy All (Plain Text)';
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
+
