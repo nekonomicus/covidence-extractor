@@ -502,7 +502,7 @@
         <div class="upload-panel">
             <div class="logo">
                 <div class="logo-icon">CE</div>
-                <h1>Covidence Extractor<span>Burst Fracture Review</span></h1>
+                <h1>Covidence Extractor<span>Sex Differences in Burst Fractures</span></h1>
             </div>
             
             <div class="drop-zone" id="dropZone">
@@ -681,10 +681,11 @@
             // Participants
             html += renderSection('Participants', [
                 { label: 'Total number of participants', key: 'total_number', data: data.participants },
-                { label: 'Number of females included (total number)', key: 'females_total_number', data: data.participants },
-                { label: 'Number of females included (%)', key: 'females_percentage', data: data.participants },
-                { label: 'Results reported for gender differences?', key: 'gender_differences_reported', data: data.participants },
-                { label: 'Differences in treatment outcome between gender?', key: 'treatment_outcome_gender_differences', data: data.participants }
+                { label: 'Females (n)', key: 'females_total_number', data: data.participants },
+                { label: 'Females (%)', key: 'females_percentage', data: data.participants },
+                { label: 'Males (n)', key: 'males_total_number', data: data.participants },
+                { label: 'Males (%)', key: 'males_percentage', data: data.participants },
+                { label: 'Sex ratio per treatment arm', key: 'sex_ratio_reported_per_treatment_arm', data: data.participants }
             ]);
             
             // Age Table
@@ -711,75 +712,95 @@
                                 <td>${getValue(data.participants, 'age_male_mean')}</td>
                                 <td>${getValue(data.participants, 'age_male_sd')}</td>
                             </tr>
+                            <tr>
+                                <td>Overall</td>
+                                <td>${getValue(data.participants, 'age_overall_mean')}</td>
+                                <td>${getValue(data.participants, 'age_overall_sd')}</td>
+                            </tr>
                         </table>
                     </div>
                 </div>
             `;
             
-            // Outcomes Time Point 1
-            if (data.outcomes_timepoint1) {
+            // SEX ANALYSIS METHODS (NEW - highlighted)
+            if (data.sex_analysis_methods) {
+                html += renderSection('🔬 Sex Analysis Methods', [
+                    { label: 'Sex used as covariate?', key: 'sex_used_as_covariate', data: data.sex_analysis_methods },
+                    { label: 'Sex-stratified subgroup analysis?', key: 'sex_stratified_subgroup_analysis', data: data.sex_analysis_methods },
+                    { label: 'Sex interaction tested?', key: 'sex_interaction_tested', data: data.sex_analysis_methods },
+                    { label: 'Sex mentioned in limitations?', key: 'sex_mentioned_in_limitations', data: data.sex_analysis_methods }
+                ]);
+            }
+            
+            // SEX DIFFERENCES RESULTS (NEW - highlighted)
+            if (data.sex_differences_results) {
+                html += renderSection('⚥ Sex Differences Results', [
+                    { label: 'Any sex-stratified outcomes reported?', key: 'any_sex_stratified_outcomes_reported', data: data.sex_differences_results },
+                    { label: 'Primary outcome by sex', key: 'primary_outcome_by_sex', data: data.sex_differences_results },
+                    { label: 'Secondary outcomes by sex', key: 'secondary_outcomes_by_sex', data: data.sex_differences_results },
+                    { label: 'Complications by sex', key: 'complications_by_sex', data: data.sex_differences_results },
+                    { label: 'Significant sex difference found?', key: 'statistically_significant_sex_difference_found', data: data.sex_differences_results },
+                    { label: 'Direction of sex difference', key: 'direction_of_sex_difference', data: data.sex_differences_results }
+                ]);
+            }
+            
+            // Outcomes Overall
+            if (data.outcomes_overall) {
+                html += renderSection('Outcomes (Overall)', [
+                    { label: 'Primary outcome name', key: 'primary_outcome_name', data: data.outcomes_overall },
+                    { label: 'Intervention 1 name', key: 'intervention1_name', data: data.outcomes_overall },
+                    { label: 'Intervention 1 n', key: 'intervention1_n', data: data.outcomes_overall },
+                    { label: 'Intervention 1 Mean', key: 'intervention1_mean', data: data.outcomes_overall },
+                    { label: 'Intervention 1 SD', key: 'intervention1_sd', data: data.outcomes_overall },
+                    { label: 'Intervention 2 name', key: 'intervention2_name', data: data.outcomes_overall },
+                    { label: 'Intervention 2 n', key: 'intervention2_n', data: data.outcomes_overall },
+                    { label: 'Intervention 2 Mean', key: 'intervention2_mean', data: data.outcomes_overall },
+                    { label: 'Intervention 2 SD', key: 'intervention2_sd', data: data.outcomes_overall }
+                ]);
+            }
+            
+            // Outcomes by Sex Table (NEW)
+            if (data.outcomes_by_sex) {
                 html += `
                     <div class="section">
-                        <div class="section-header">
-                            <h3>Outcome Table (Time Point 1)</h3>
-                            <button class="section-copy" onclick="copyTable('outcomeTable1')">Copy table</button>
+                        <div class="section-header" style="border-left-color: #f85149;">
+                            <h3>⚥ Outcomes by Sex</h3>
+                            <button class="section-copy" onclick="copyTable('outcomesBySex')">Copy table</button>
                         </div>
                         <div class="table-container">
-                            <table class="data-table" id="outcomeTable1">
+                            <table class="data-table" id="outcomesBySex">
                                 <tr>
                                     <th>Intervention</th>
+                                    <th>Sex</th>
+                                    <th>n</th>
                                     <th>Mean</th>
                                     <th>SD</th>
                                 </tr>
                                 <tr>
-                                    <td>${getValue(data.outcomes_timepoint1, 'intervention1_name')}</td>
-                                    <td>${getValue(data.outcomes_timepoint1, 'intervention1_mean')}</td>
-                                    <td>${getValue(data.outcomes_timepoint1, 'intervention1_sd')}</td>
+                                    <td rowspan="2">Intervention 1</td>
+                                    <td>Female</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention1_female', 'n')}</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention1_female', 'mean')}</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention1_female', 'sd')}</td>
                                 </tr>
                                 <tr>
-                                    <td>${getValue(data.outcomes_timepoint1, 'intervention2_name')}</td>
-                                    <td>${getValue(data.outcomes_timepoint1, 'intervention2_mean')}</td>
-                                    <td>${getValue(data.outcomes_timepoint1, 'intervention2_sd')}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Outcomes by Gender
-            if (data.outcomes_by_gender) {
-                html += `
-                    <div class="section">
-                        <div class="section-header">
-                            <h3>Outcome Table (by Gender)</h3>
-                            <button class="section-copy" onclick="copyTable('outcomeTableGender')">Copy table</button>
-                        </div>
-                        <div class="table-container">
-                            <table class="data-table" id="outcomeTableGender">
-                                <tr>
-                                    <th></th>
-                                    <th>Specify Intervention</th>
-                                    <th>Mean (female)</th>
-                                    <th>SD (female)</th>
-                                    <th>Mean (male)</th>
-                                    <th>SD (male)</th>
+                                    <td>Male</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention1_male', 'n')}</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention1_male', 'mean')}</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention1_male', 'sd')}</td>
                                 </tr>
                                 <tr>
-                                    <td>Intervention 1</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'name')}</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'female_mean')}</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'female_sd')}</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'male_mean')}</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention1', 'male_sd')}</td>
+                                    <td rowspan="2">Intervention 2</td>
+                                    <td>Female</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention2_female', 'n')}</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention2_female', 'mean')}</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention2_female', 'sd')}</td>
                                 </tr>
                                 <tr>
-                                    <td>Intervention 2</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'name')}</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'female_mean')}</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'female_sd')}</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'male_mean')}</td>
-                                    <td>${getNestedValue(data.outcomes_by_gender, 'intervention2', 'male_sd')}</td>
+                                    <td>Male</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention2_male', 'n')}</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention2_male', 'mean')}</td>
+                                    <td>${getDeepValue(data.outcomes_by_sex, 'intervention2_male', 'sd')}</td>
                                 </tr>
                             </table>
                         </div>
@@ -791,13 +812,17 @@
             if (data.extraction_notes) {
                 html += `
                     <div class="notes-box">
-                        <h4>⚠️ Extraction Notes</h4>
-                        <p>${data.extraction_notes}</p>
+                        <h4>⚠️ Extraction Notes (Sex Reporting Summary)</h4>
+                        <p>${escapeHtml(data.extraction_notes)}</p>
                     </div>
                 `;
             }
             
             resultsContent.innerHTML = html;
+        }
+        
+        function getDeepValue(obj, parent, key) {
+            return obj?.[parent]?.[key]?.value || 'NR';
         }
         
         function renderSection(title, fields) {
@@ -873,7 +898,7 @@
             if (!extractedData) return;
             
             const d = extractedData;
-            let text = `=== COVIDENCE DATA EXTRACTION ===
+            let text = `=== COVIDENCE DATA EXTRACTION (SEX DIFFERENCES REVIEW) ===
 
 --- GENERAL INFORMATION ---
 Authors & Year: ${getValue(d.general_information, 'authors_year')}
@@ -890,24 +915,46 @@ End date: ${getValue(d.methods, 'end_date')}
 Total number: ${getValue(d.participants, 'total_number')}
 Females (n): ${getValue(d.participants, 'females_total_number')}
 Females (%): ${getValue(d.participants, 'females_percentage')}
-Gender differences reported: ${getValue(d.participants, 'gender_differences_reported')}
-Treatment outcome gender diff: ${getValue(d.participants, 'treatment_outcome_gender_differences')}
+Males (n): ${getValue(d.participants, 'males_total_number')}
+Males (%): ${getValue(d.participants, 'males_percentage')}
+Sex ratio per treatment arm: ${getValue(d.participants, 'sex_ratio_reported_per_treatment_arm')}
 
 --- AGE ---
 Female Mean: ${getValue(d.participants, 'age_female_mean')}
 Female SD: ${getValue(d.participants, 'age_female_sd')}
 Male Mean: ${getValue(d.participants, 'age_male_mean')}
 Male SD: ${getValue(d.participants, 'age_male_sd')}
+Overall Mean: ${getValue(d.participants, 'age_overall_mean')}
+Overall SD: ${getValue(d.participants, 'age_overall_sd')}
 
---- OUTCOMES (Time Point 1) ---
-Intervention 1: ${getValue(d.outcomes_timepoint1, 'intervention1_name')}
-  Mean: ${getValue(d.outcomes_timepoint1, 'intervention1_mean')}
-  SD: ${getValue(d.outcomes_timepoint1, 'intervention1_sd')}
-Intervention 2: ${getValue(d.outcomes_timepoint1, 'intervention2_name')}
-  Mean: ${getValue(d.outcomes_timepoint1, 'intervention2_mean')}
-  SD: ${getValue(d.outcomes_timepoint1, 'intervention2_sd')}
+--- SEX ANALYSIS METHODS ---
+Sex used as covariate: ${getValue(d.sex_analysis_methods, 'sex_used_as_covariate')}
+Sex-stratified subgroup analysis: ${getValue(d.sex_analysis_methods, 'sex_stratified_subgroup_analysis')}
+Sex interaction tested: ${getValue(d.sex_analysis_methods, 'sex_interaction_tested')}
+Sex mentioned in limitations: ${getValue(d.sex_analysis_methods, 'sex_mentioned_in_limitations')}
 
---- NOTES ---
+--- SEX DIFFERENCES RESULTS ---
+Any sex-stratified outcomes reported: ${getValue(d.sex_differences_results, 'any_sex_stratified_outcomes_reported')}
+Primary outcome by sex: ${getValue(d.sex_differences_results, 'primary_outcome_by_sex')}
+Secondary outcomes by sex: ${getValue(d.sex_differences_results, 'secondary_outcomes_by_sex')}
+Complications by sex: ${getValue(d.sex_differences_results, 'complications_by_sex')}
+Significant sex difference found: ${getValue(d.sex_differences_results, 'statistically_significant_sex_difference_found')}
+Direction of sex difference: ${getValue(d.sex_differences_results, 'direction_of_sex_difference')}
+
+--- OUTCOMES (OVERALL) ---
+Primary outcome: ${getValue(d.outcomes_overall, 'primary_outcome_name')}
+Intervention 1: ${getValue(d.outcomes_overall, 'intervention1_name')} (n=${getValue(d.outcomes_overall, 'intervention1_n')})
+  Mean: ${getValue(d.outcomes_overall, 'intervention1_mean')}, SD: ${getValue(d.outcomes_overall, 'intervention1_sd')}
+Intervention 2: ${getValue(d.outcomes_overall, 'intervention2_name')} (n=${getValue(d.outcomes_overall, 'intervention2_n')})
+  Mean: ${getValue(d.outcomes_overall, 'intervention2_mean')}, SD: ${getValue(d.outcomes_overall, 'intervention2_sd')}
+
+--- OUTCOMES BY SEX ---
+Intervention 1 Female: n=${getDeepValue(d.outcomes_by_sex, 'intervention1_female', 'n')}, Mean=${getDeepValue(d.outcomes_by_sex, 'intervention1_female', 'mean')}, SD=${getDeepValue(d.outcomes_by_sex, 'intervention1_female', 'sd')}
+Intervention 1 Male: n=${getDeepValue(d.outcomes_by_sex, 'intervention1_male', 'n')}, Mean=${getDeepValue(d.outcomes_by_sex, 'intervention1_male', 'mean')}, SD=${getDeepValue(d.outcomes_by_sex, 'intervention1_male', 'sd')}
+Intervention 2 Female: n=${getDeepValue(d.outcomes_by_sex, 'intervention2_female', 'n')}, Mean=${getDeepValue(d.outcomes_by_sex, 'intervention2_female', 'mean')}, SD=${getDeepValue(d.outcomes_by_sex, 'intervention2_female', 'sd')}
+Intervention 2 Male: n=${getDeepValue(d.outcomes_by_sex, 'intervention2_male', 'n')}, Mean=${getDeepValue(d.outcomes_by_sex, 'intervention2_male', 'mean')}, SD=${getDeepValue(d.outcomes_by_sex, 'intervention2_male', 'sd')}
+
+--- EXTRACTION NOTES ---
 ${d.extraction_notes || 'None'}
 `;
             
